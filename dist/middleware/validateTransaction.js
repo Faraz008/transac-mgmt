@@ -10,10 +10,10 @@ const validateTransaction = (req, res, next) => {
         res.status(400).json({ success: false, message: "Amount must be a positive number" });
         return;
     }
-    if (type !== "credit" && type !== "debit") {
+    if (!["credit", "debit"].includes(type.toLowerCase())) {
         res.status(400).json({ success: false, message: "Type must be either 'credit' or 'debit'" });
         return;
     }
-    next(); //
+    next(); // ✅ Proceed to the next middleware or route handler
 };
 exports.default = validateTransaction;
