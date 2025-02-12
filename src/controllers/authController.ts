@@ -16,5 +16,5 @@ export const login = (req: Request, res: Response): void => {
   }
 
   const token = generateToken({ username });
-  res.json({ success: true, token });
+  res.json({ success: true, token: "*******"});
 };
