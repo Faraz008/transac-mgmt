@@ -1,32 +1,28 @@
 import { Request, Response } from "express";
 import Transaction from "../models/transactionModel";
 
-// masking `_id`
-const maskTransactionId = (transaction: any) => {
+// ✅ Function to mask `_id`
+const maskTransactionId = (transaction: any, revealId = false) => {
   if (transaction) {
     const maskedTransaction = transaction.toObject();
-    maskedTransaction._id = "******"; //Mask _id
+    maskedTransaction._id = revealId ? transaction._id : "******"; // ✅ Reveal only when needed
     return maskedTransaction;
   }
   return null;
 };
 
-// @desc   Get all transactions
-// @route  GET /api/transactions
+// ✅ GET all transactions (Masked IDs)
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
     const transactions = await Transaction.find();
-    const maskedTransactions = transactions.map(maskTransactionId); // ✅ Mask all IDs
-
-    res.json({ success: true, data: maskedTransactions });
+    res.json({ success: true, data: transactions.map((t) => maskTransactionId(t, false)) });
   } catch (error) {
     console.error("🔥 GET Transactions Error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-// @desc   Get a single transaction
-// @route  GET /api/transactions/:id
+// ✅ GET single transaction by ID (Masked ID)
 export const getTransactionById = async (req: Request, res: Response): Promise<void> => {
   try {
     const transaction = await Transaction.findById(req.params.id);
@@ -43,8 +39,7 @@ export const getTransactionById = async (req: Request, res: Response): Promise<v
   }
 };
 
-// @desc   Create a new transaction
-// @route  POST /api/transactions
+// ✅ POST Create a new transaction (Returns REAL _id for Postman)
 export const createTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
     const { type, amount, description } = req.body;
@@ -57,15 +52,14 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
     const newTransaction = new Transaction({ type, amount, description });
     await newTransaction.save();
 
-    res.status(201).json({ success: true, data: maskTransactionId(newTransaction) }); // ✅ Mask ID
+    res.status(201).json({ success: true, data: newTransaction }); // ✅ Send real _id
   } catch (error) {
     console.error("🔥 POST Transaction Error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-// @desc   Update a transaction
-// @route  PUT /api/transactions/:id
+// ✅ PUT Update a transaction (Masked ID)
 export const updateTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
     const { type, amount, description } = req.body;
@@ -88,8 +82,7 @@ export const updateTransaction = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// @desc   Delete a transaction
-// @route  DELETE /api/transactions/:id
+// ✅ DELETE a transaction (No ID needed in response)
 export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
   try {
     const deletedTransaction = await Transaction.findByIdAndDelete(req.params.id);
