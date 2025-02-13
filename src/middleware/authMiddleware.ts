@@ -1,31 +1,26 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt";
+import jwt from "jsonwebtoken";
 
 interface AuthRequest extends Request {
   user?: any;
 }
 
-const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.header("Authorization");
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ success: false, message: "Access denied. No token provided." });
-    return;
-  }
-
-  const token = authHeader.split(" ")[1];
-
+const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      res.status(403).json({ success: false, message: "Invalid or expired token" });
-      return;
+    const authHeader = req.header("Authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next({ message: "Access denied. No token provided.", status: 401 });
     }
 
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     req.user = decoded; // Attach user info to request object
-    next(); // ✅ Correctly calling next()
+
+    next();
   } catch (error) {
-    res.status(403).json({ success: false, message: "Invalid or expired token" });
+    return next({ message: "Invalid or expired token", status: 403 });
   }
 };
 

@@ -2,23 +2,25 @@ import { Request, Response, NextFunction } from "express";
 
 const validateTransaction = (req: Request, res: Response, next: NextFunction): void => {
   const { type, amount, description } = req.body;
+  let errors: string[] = [];
 
-  if (!type || !amount || !description) {
-    res.status(400).json({ success: false, message: "All fields are required" });
-    return;
+  if (!type) errors.push("Type is required");
+  if (!amount) errors.push("Amount is required");
+  if (!description) errors.push("Description is required");
+
+  if (amount !== undefined && (typeof amount !== "number" || amount <= 0)) {
+    errors.push("Amount must be a positive number");
   }
 
-  if (typeof amount !== "number" || amount <= 0) {
-    res.status(400).json({ success: false, message: "Amount must be a positive number" });
-    return;
+  if (type && !["credit", "debit"].includes(type.toLowerCase())) {
+    errors.push("Type must be either 'credit' or 'debit'");
   }
 
-  if (!["credit", "debit"].includes(type.toLowerCase())) {
-    res.status(400).json({ success: false, message: "Type must be either 'credit' or 'debit'" });
-    return; 
+  if (errors.length > 0) {
+    return next({ message: errors.join(", "), status: 400 }); // ✅ Pass errors to error handler
   }
 
-  next(); // ✅ Proceed to the next middleware or route handler
+  next();
 };
 
 export default validateTransaction;

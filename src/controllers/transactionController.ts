@@ -1,33 +1,34 @@
-import { Request, Response } from "express";
-import mongoose from "mongoose"; // ✅ Import mongoose to validate ObjectId
+import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import Transaction from "../models/transactionModel";
 
 // ✅ Utility function to check valid MongoDB ObjectId
 const isValidObjectId = (id: string): boolean => mongoose.Types.ObjectId.isValid(id);
 
 // ✅ GET all transactions
-export const getTransactions = async (req: Request, res: Response): Promise<void> => {
+export const getTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const transactions = await Transaction.find();
     res.json({ success: true, data: transactions });
   } catch (error) {
-    console.error("🔥 GET Transactions Error:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    next(error);
   }
 };
 
 // ✅ GET single transaction by ID
-export const getTransactionById = async (req: Request, res: Response): Promise<void> => {
+export const getTransactionById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
 
-    if (!isValidObjectId(id)) {
-      res.status(404).json({ success: false, message: "Transaction not found" });
+    let errors: string[] = [];
+    if (!isValidObjectId(id)) errors.push("Invalid Transaction ID");
+
+    if (errors.length > 0) {
+      res.status(400).json({ success: false, errors });
       return;
     }
 
     const transaction = await Transaction.findById(id);
-
     if (!transaction) {
       res.status(404).json({ success: false, message: "Transaction not found" });
       return;
@@ -35,18 +36,30 @@ export const getTransactionById = async (req: Request, res: Response): Promise<v
 
     res.json({ success: true, data: transaction });
   } catch (error) {
-    console.error("🔥 GET Transaction Error:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    next(error);
   }
 };
 
-// ✅ POST Create a new transaction
-export const createTransaction = async (req: Request, res: Response): Promise<void> => {
+// ✅ POST Create a new transaction (Handles Multiple Errors)
+export const createTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { type, amount, description } = req.body;
+    let errors: string[] = [];
 
-    if (!type || !amount || !description) {
-      res.status(400).json({ success: false, message: "All fields are required" });
+    if (!type) errors.push("Type is required");
+    if (!amount) errors.push("Amount is required");
+    if (!description) errors.push("Description is required");
+
+    if (amount !== undefined && (typeof amount !== "number" || amount <= 0)) {
+      errors.push("Amount must be a positive number");
+    }
+
+    if (type && !["credit", "debit"].includes(type)) {
+      errors.push("Type must be either 'credit' or 'debit'");
+    }
+
+    if (errors.length > 0) {
+      res.status(400).json({ success: false, errors });
       return;
     }
 
@@ -55,19 +68,29 @@ export const createTransaction = async (req: Request, res: Response): Promise<vo
 
     res.status(201).json({ success: true, data: newTransaction });
   } catch (error) {
-    console.error("🔥 POST Transaction Error:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    next(error);
   }
 };
 
-// ✅ PUT Update a transaction
-export const updateTransaction = async (req: Request, res: Response): Promise<void> => {
+// ✅ PUT Update a transaction (Handles Multiple Errors)
+export const updateTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const { type, amount, description } = req.body;
+    let errors: string[] = [];
 
-    if (!isValidObjectId(id)) {
-      res.status(404).json({ success: false, message: "Transaction not found" });
+    if (!isValidObjectId(id)) errors.push("Invalid Transaction ID");
+
+    if (amount !== undefined && (typeof amount !== "number" || amount <= 0)) {
+      errors.push("Amount must be a positive number");
+    }
+
+    if (type && !["credit", "debit"].includes(type)) {
+      errors.push("Type must be either 'credit' or 'debit'");
+    }
+
+    if (errors.length > 0) {
+      res.status(400).json({ success: false, errors });
       return;
     }
 
@@ -84,23 +107,24 @@ export const updateTransaction = async (req: Request, res: Response): Promise<vo
 
     res.json({ success: true, data: updatedTransaction });
   } catch (error) {
-    console.error("🔥 UPDATE Transaction Error:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    next(error);
   }
 };
 
 // ✅ DELETE a transaction
-export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
+export const deleteTransaction = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
+    let errors: string[] = [];
 
-    if (!isValidObjectId(id)) {
-      res.status(404).json({ success: false, message: "Transaction not found" });
+    if (!isValidObjectId(id)) errors.push("Invalid Transaction ID");
+
+    if (errors.length > 0) {
+      res.status(400).json({ success: false, errors });
       return;
     }
 
     const deletedTransaction = await Transaction.findByIdAndDelete(id);
-
     if (!deletedTransaction) {
       res.status(404).json({ success: false, message: "Transaction not found" });
       return;
@@ -108,7 +132,6 @@ export const deleteTransaction = async (req: Request, res: Response): Promise<vo
 
     res.json({ success: true, message: "Transaction deleted" });
   } catch (error) {
-    console.error("🔥 DELETE Transaction Error:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
+    next(error);
   }
 };

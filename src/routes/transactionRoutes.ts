@@ -1,21 +1,20 @@
 import express from "express";
-import {
-  getTransactions,
-  getTransactionById,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
+import { 
+  getTransactions, 
+  getTransactionById, 
+  createTransaction, 
+  updateTransaction, 
+  deleteTransaction 
 } from "../controllers/transactionController";
 import validateTransaction from "../middleware/validateTransaction";
-import authMiddleware from "../middleware/authMiddleware"; // ✅ Import authentication middleware
+import authMiddleware from "../middleware/authMiddleware"; // ✅ Ensure JWT auth middleware is used
 
 const router = express.Router();
 
-// ✅ Apply authentication middleware to all protected routes
-router.get("/", authMiddleware, getTransactions);
-router.get("/:id", authMiddleware, getTransactionById);
-router.post("/", authMiddleware, validateTransaction, createTransaction);
-router.put("/:id", authMiddleware, validateTransaction, updateTransaction);
-router.delete("/:id", authMiddleware, deleteTransaction);
+router.get("/", authMiddleware, (req, res, next) => getTransactions(req, res, next));
+router.get("/:id", authMiddleware, (req, res, next) => getTransactionById(req, res, next));
+router.post("/", authMiddleware, validateTransaction, (req, res, next) => createTransaction(req, res, next));
+router.put("/:id", authMiddleware, validateTransaction, (req, res, next) => updateTransaction(req, res, next));
+router.delete("/:id", authMiddleware, (req, res, next) => deleteTransaction(req, res, next));
 
 export default router;
